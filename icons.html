@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+body { margin: 20px; padding: 0; background: #f0f0f0; font-family: sans-serif; }
+h3 { margin: 20px 0 8px; }
+.container { display: flex; gap: 40px; flex-wrap: wrap; }
+.item { text-align: center; }
+.item p { font-size: 12px; color: #666; margin-top: 4px; }
+
+.icon {
+  background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+.icon-128 { width: 128px; height: 128px; border-radius: 24px; }
+.icon-32 { width: 32px; height: 32px; border-radius: 6px; }
+
+.doc {
+  background: white;
+  border-radius: 4px;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+}
+.icon-128 .doc { width: 56px; height: 68px; padding: 8px 6px; }
+.icon-32 .doc { width: 14px; height: 18px; padding: 2px; border-radius: 2px; }
+
+.doc-line {
+  background: #dadce0;
+  border-radius: 2px;
+}
+.icon-128 .doc-line { height: 3px; margin-bottom: 4px; }
+.icon-128 .doc-line.title { background: #1a73e8; width: 70%; }
+.icon-128 .doc-line.short { width: 50%; }
+
+.icon-32 .doc-line { height: 1px; margin-bottom: 1px; }
+.icon-32 .doc-line.title { background: #1a73e8; width: 70%; }
+.icon-32 .doc-line.short { width: 50%; }
+
+.yen {
+  position: absolute;
+  font-weight: 800;
+  color: rgba(255,255,255,0.9);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.icon-128 .yen { bottom: 4px; right: 4px; font-size: 28px; }
+.icon-32 .yen { bottom: 0px; right: 1px; font-size: 10px; }
+
+.check {
+  position: absolute;
+  color: #34a853;
+}
+.icon-128 .check { top: 2px; right: 6px; font-size: 16px; }
+.icon-32 .check { display: none; }
+
+/* Banner 220x140 */
+.banner {
+  width: 220px;
+  height: 140px;
+  background: linear-gradient(135deg, #e8f0fe 0%, #d2e3fc 100%);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px;
+}
+.banner .icon-mini {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+}
+.banner .icon-mini .doc {
+  width: 20px; height: 26px; padding: 3px; border-radius: 2px;
+}
+.banner .icon-mini .doc-line { height: 1.5px; margin-bottom: 2px; }
+.banner .icon-mini .doc-line.title { background: #1a73e8; width: 70%; }
+.banner .icon-mini .doc-line.short { width: 50%; }
+.banner .icon-mini .yen { bottom: 1px; right: 2px; font-size: 14px; }
+.banner .text {
+  font-size: 13px;
+  color: #1a73e8;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.banner .text small {
+  display: block;
+  font-size: 10px;
+  color: #5f6368;
+  font-weight: 400;
+  margin-top: 2px;
+}
+</style>
+</head>
+<body>
+
+<h3>1. アイコン 128x128（白背景でスクショ）</h3>
+<div style="background:white; display:inline-block; padding:0;">
+<div class="icon icon-128">
+  <div class="doc">
+    <div class="doc-line title"></div>
+    <div class="doc-line"></div>
+    <div class="doc-line short"></div>
+    <div class="doc-line"></div>
+    <div class="doc-line short"></div>
+    <div class="check">&#x2713;</div>
+  </div>
+  <div class="yen">¥</div>
+</div>
+</div>
+
+<h3>2. アイコン 32x32</h3>
+<div style="background:white; display:inline-block; padding:0;">
+<div class="icon icon-32">
+  <div class="doc">
+    <div class="doc-line title"></div>
+    <div class="doc-line"></div>
+    <div class="doc-line short"></div>
+  </div>
+  <div class="yen">¥</div>
+</div>
+</div>
+
+<h3>3. バナー 220x140</h3>
+<div style="background:white; display:inline-block; padding:0;">
+<div class="banner">
+  <div class="icon-mini">
+    <div class="doc">
+      <div class="doc-line title"></div>
+      <div class="doc-line"></div>
+      <div class="doc-line short"></div>
+      <div class="doc-line"></div>
+    </div>
+    <div class="yen">¥</div>
+  </div>
+  <div class="text">
+    請求書メーカー<br>for Sheets
+    <small>インボイス制度対応</small>
+  </div>
+</div>
+</div>
+
+<h3 style="margin-top:30px;">スクショ手順</h3>
+<p style="font-size:13px; color:#333;">
+各画像の上で Win+Shift+S → 画像部分だけ切り取り → ペイントに貼り付けて保存<br>
+※ ピッタリのサイズで表示されているので、そのままスクショでOK
+</p>
+
+</body>
+</html>

@@ -13,7 +13,7 @@ function onHomepage(e) {
 
 function onOpen(e) {
   SpreadsheetApp.getUi()
-    .createAddonMenu()
+    .createMenu('請求書メーカー')
     .addItem('請求書を作成', 'showSidebar')
     .addItem('設定', 'showSettingsSidebar')
     .addToUi();

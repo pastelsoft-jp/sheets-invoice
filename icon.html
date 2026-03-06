@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+body { margin: 0; padding: 0; background: white; }
+.icon {
+  width: 128px;
+  height: 128px;
+  background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  font-family: 'Segoe UI', sans-serif;
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+.doc {
+  width: 56px;
+  height: 68px;
+  background: white;
+  border-radius: 4px;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  padding: 8px 6px;
+}
+.doc-line {
+  height: 3px;
+  background: #dadce0;
+  border-radius: 2px;
+  margin-bottom: 4px;
+}
+.doc-line.title { background: #1a73e8; width: 70%; }
+.doc-line.short { width: 50%; }
+.yen {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  font-size: 28px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.9);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.check {
+  position: absolute;
+  top: 2px;
+  right: 6px;
+  font-size: 16px;
+  color: #34a853;
+}
+</style>
+</head>
+<body>
+<div class="icon">
+  <div class="doc">
+    <div class="doc-line title"></div>
+    <div class="doc-line"></div>
+    <div class="doc-line short"></div>
+    <div class="doc-line"></div>
+    <div class="doc-line short"></div>
+    <div class="check">&#x2713;</div>
+  </div>
+  <div class="yen">¥</div>
+</div>
+</body>
+</html>
