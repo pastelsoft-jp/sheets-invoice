@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <?!= include('styles'); ?>
+</head>
+<body>
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loadingText">読み込み中...</div>
+  </div>
+
+  <!-- ========== Onboarding View ========== -->
+  <div id="onboardingView" style="display:none;">
+    <div class="onboarding">
+      <div class="onboarding-icon">&#x1F4DD;</div>
+      <h2>請求書メーカーへようこそ</h2>
+      <p>インボイス制度対応の請求書を3ステップで作成</p>
+
+      <div class="onboarding-steps">
+        <div class="onboarding-step">
+          <div class="step-number">1</div>
+          <div class="step-text">まず事業者情報を登録します</div>
+        </div>
+        <div class="onboarding-step">
+          <div class="step-number">2</div>
+          <div class="step-text">取引先と品目を入力</div>
+        </div>
+        <div class="onboarding-step">
+          <div class="step-number">3</div>
+          <div class="step-text">PDF生成ボタンで完成</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Issuer Setup Form -->
+    <div class="card">
+      <div class="section-title">事業者情報</div>
+
+      <div class="form-group">
+        <label class="label">事業者名 <span style="color:var(--error)">*</span></label>
+        <input type="text" class="input" id="setupIssuerName" placeholder="きなり工房">
+      </div>
+
+      <div class="form-group">
+        <label class="label">登録番号（T+13桁）</label>
+        <input type="text" class="input" id="setupRegNumber" placeholder="T1234567890123" maxlength="14">
+        <div class="info-text" id="regNumberHint">インボイス制度の適格請求書発行事業者の登録番号</div>
+      </div>
+
+      <div class="form-group">
+        <label class="label">住所</label>
+        <input type="text" class="input" id="setupAddress" placeholder="東京都渋谷区...">
+      </div>
+
+      <div class="form-row" style="margin-bottom:16px;">
+        <div class="form-group">
+          <label class="label">電話番号</label>
+          <input type="text" class="input" id="setupPhone" placeholder="03-XXXX-XXXX">
+        </div>
+        <div class="form-group">
+          <label class="label">メール</label>
+          <input type="email" class="input" id="setupEmail" placeholder="info@example.com">
+        </div>
+      </div>
+
+      <div class="section-title">振込先口座</div>
+
+      <div class="form-row" style="margin-bottom:8px;">
+        <div class="form-group">
+          <label class="label">銀行名</label>
+          <input type="text" class="input input-sm" id="setupBankName" placeholder="三菱UFJ銀行">
+        </div>
+        <div class="form-group">
+          <label class="label">支店名</label>
+          <input type="text" class="input input-sm" id="setupBranchName" placeholder="渋谷支店">
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-bottom:8px;">
+        <div class="form-group">
+          <label class="label">口座種別</label>
+          <select class="select" id="setupAccountType" style="padding:6px 8px;font-size:13px;">
+            <option value="普通">普通</option>
+            <option value="当座">当座</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="label">口座番号</label>
+          <input type="text" class="input input-sm" id="setupAccountNumber" placeholder="1234567">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="label">口座名義（カタカナ）</label>
+        <input type="text" class="input input-sm" id="setupAccountHolder" placeholder="キナリコウボウ">
+      </div>
+
+      <button class="btn btn-primary" onclick="completeSetup()">設定を保存してはじめる</button>
+    </div>
+  </div>
+
+  <!-- ========== Main View ========== -->
+  <div id="mainView" style="display:none;">
+
+    <!-- Usage Bar -->
+    <div id="usageCard" class="card" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span class="label" style="margin:0;">今月の請求書</span>
+        <span class="badge badge-free" id="planBadge">無料プラン</span>
+      </div>
+      <div class="usage-bar-container">
+        <div class="usage-bar">
+          <div class="usage-bar-fill" id="usageBarFill" style="width:0%"></div>
+        </div>
+        <div class="usage-text" id="usageText">0 / 3枚</div>
+      </div>
+    </div>
+
+    <!-- Upgrade Banner (free only) -->
+    <div id="upgradeBanner" class="upgrade-banner" style="display:none;">
+      <h3>プランをアップグレード</h3>
+      <p>無制限生成・顧客マスタ・一括生成が利用可能に</p>
+      <button class="btn btn-primary btn-sm" onclick="handleUpgrade('basic')">Basic ¥500/月</button>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('create')" id="tabCreate">新規作成</button>
+      <button class="tab" onclick="switchTab('history')" id="tabHistory">履歴</button>
+      <button class="tab" onclick="switchTab('settings')" id="tabSettings">設定</button>
+    </div>
+
+    <!-- ===== Create Tab ===== -->
+    <div id="createTab">
+      <!-- Client Info -->
+      <div class="card">
+        <div class="section-title">請求先</div>
+
+        <div id="customerSelectArea" class="customer-select" style="display:none;">
+          <select class="select" id="customerSelect">
+            <option value="">-- 顧客マスタから選択 --</option>
+          </select>
+          <button class="btn btn-secondary btn-icon" onclick="loadCustomerFromMaster()" title="呼び出し">&#x21B5;</button>
+          <button class="btn btn-secondary btn-icon" onclick="deleteSelectedCustomer()" title="削除" style="color:var(--error);">&times;</button>
+        </div>
+
+        <div class="form-group">
+          <label class="label">取引先名 <span style="color:var(--error)">*</span></label>
+          <input type="text" class="input" id="clientName" placeholder="株式会社ABC">
+        </div>
+
+        <div class="form-group">
+          <label class="label">住所</label>
+          <input type="text" class="input" id="clientAddress" placeholder="東京都...">
+        </div>
+
+        <div class="form-group">
+          <label class="label">担当者名</label>
+          <input type="text" class="input" id="clientContact" placeholder="山田太郎">
+        </div>
+
+        <div id="saveCustomerArea" style="display:none;">
+          <button class="btn btn-secondary btn-sm" onclick="saveCurrentAsCustomer()">この取引先を顧客マスタに保存</button>
+        </div>
+      </div>
+
+      <!-- Items -->
+      <div class="card">
+        <div class="section-title">品目</div>
+        <div id="itemsContainer"></div>
+        <button class="add-item-btn" onclick="addItemRow()">+ 品目を追加</button>
+      </div>
+
+      <!-- Options -->
+      <div class="card">
+        <div class="section-title">オプション</div>
+
+        <div class="form-group" style="margin-bottom:8px;">
+          <label class="label">発行日</label>
+          <input type="date" class="input input-sm" id="issueDate">
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label class="label">支払期限</label>
+          <input type="date" class="input input-sm" id="dueDate">
+        </div>
+
+        <label class="checkbox-item">
+          <input type="checkbox" id="withholdingEnabled" onchange="recalculate()">
+          <span>源泉徴収を適用する</span>
+        </label>
+
+        <div class="form-group">
+          <label class="label">備考</label>
+          <textarea class="textarea" id="invoiceNote" rows="2" placeholder="お支払い期限までにお振込みください。"></textarea>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="card">
+        <div class="section-title">合計</div>
+        <table class="summary-table">
+          <tbody>
+            <tr>
+              <td>小計</td>
+              <td id="summarySubtotal">¥0</td>
+            </tr>
+            <tr id="summary10Row">
+              <td>10%対象計</td>
+              <td id="summarySubtotal10">¥0</td>
+            </tr>
+            <tr id="summaryTax10Row">
+              <td>消費税（10%）</td>
+              <td id="summaryTax10">¥0</td>
+            </tr>
+            <tr id="summary8Row" style="display:none;">
+              <td>8%対象計（軽減税率）</td>
+              <td id="summarySubtotal8">¥0</td>
+            </tr>
+            <tr id="summaryTax8Row" style="display:none;">
+              <td>消費税（8%）</td>
+              <td id="summaryTax8">¥0</td>
+            </tr>
+            <tr id="summaryWithholdingRow" class="withholding" style="display:none;">
+              <td>源泉徴収税額</td>
+              <td id="summaryWithholding">-¥0</td>
+            </tr>
+            <tr class="total">
+              <td>ご請求金額</td>
+              <td id="summaryGrandTotal">¥0</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Generate Button -->
+      <button class="btn btn-primary" id="generateBtn" onclick="handleGenerate()">
+        請求書を生成する（PDF）
+      </button>
+    </div>
+
+    <!-- ===== History Tab ===== -->
+    <div id="historyTab" style="display:none;">
+      <div class="card">
+        <div class="section-title">発行履歴</div>
+        <div id="historyList">
+          <div class="empty-state">
+            <div class="empty-state-icon">&#x1F4C4;</div>
+            <p>まだ請求書を発行していません</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Settings Tab ===== -->
+    <div id="settingsTab" style="display:none;">
+      <div class="card">
+        <div class="section-title">事業者情報</div>
+
+        <div class="form-group">
+          <label class="label">事業者名</label>
+          <input type="text" class="input" id="settingsIssuerName">
+        </div>
+        <div class="form-group">
+          <label class="label">登録番号</label>
+          <input type="text" class="input" id="settingsRegNumber" maxlength="14">
+        </div>
+        <div class="form-group">
+          <label class="label">住所</label>
+          <input type="text" class="input" id="settingsAddress">
+        </div>
+        <div class="form-row" style="margin-bottom:16px;">
+          <div class="form-group">
+            <label class="label">電話番号</label>
+            <input type="text" class="input" id="settingsPhone">
+          </div>
+          <div class="form-group">
+            <label class="label">メール</label>
+            <input type="email" class="input" id="settingsEmail">
+          </div>
+        </div>
+
+        <div class="section-title">振込先</div>
+        <div class="form-row" style="margin-bottom:8px;">
+          <div class="form-group">
+            <label class="label">銀行名</label>
+            <input type="text" class="input input-sm" id="settingsBankName">
+          </div>
+          <div class="form-group">
+            <label class="label">支店名</label>
+            <input type="text" class="input input-sm" id="settingsBranchName">
+          </div>
+        </div>
+        <div class="form-row" style="margin-bottom:8px;">
+          <div class="form-group">
+            <label class="label">口座種別</label>
+            <select class="select" id="settingsAccountType" style="padding:6px 8px;font-size:13px;">
+              <option value="普通">普通</option>
+              <option value="当座">当座</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="label">口座番号</label>
+            <input type="text" class="input input-sm" id="settingsAccountNumber">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="label">口座名義</label>
+          <input type="text" class="input input-sm" id="settingsAccountHolder">
+        </div>
+
+        <button class="btn btn-primary" onclick="saveSettingsUI()" style="margin-bottom:8px;">保存する</button>
+      </div>
+
+      <div class="card">
+        <div class="section-title">請求書設定</div>
+        <div class="form-row" style="margin-bottom:12px;">
+          <div class="form-group">
+            <label class="label">番号プレフィックス</label>
+            <input type="text" class="input input-sm" id="settingsPrefix" placeholder="INV">
+          </div>
+          <div class="form-group">
+            <label class="label">支払期限（日後）</label>
+            <input type="number" class="input input-sm" id="settingsDueDays" placeholder="30" min="1" max="90">
+          </div>
+        </div>
+        <label class="checkbox-item">
+          <input type="checkbox" id="settingsWithholding">
+          <span>源泉徴収をデフォルトON</span>
+        </label>
+        <div class="form-group">
+          <label class="label">デフォルト備考</label>
+          <textarea class="textarea" id="settingsNote" rows="2"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="saveInvoiceSettingsUI()">保存する</button>
+      </div>
+
+      <div class="card">
+        <div class="section-title">プラン管理</div>
+        <div id="settingsPlanInfo"></div>
+        <button class="btn btn-secondary btn-sm" id="portalBtn" onclick="openCustomerPortal()" style="display:none; margin-top:8px;">
+          サブスクリプション管理（Stripe）
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="section-title">データ管理</div>
+        <button class="btn btn-danger btn-sm" onclick="handleResetSettings()">
+          全設定をリセット
+        </button>
+        <p class="info-text">全ての設定・顧客マスタ・履歴を初期化します。</p>
+      </div>
+    </div>
+
+    <!-- Result Area -->
+    <div id="resultArea" style="display:none;"></div>
+
+    <!-- Messages -->
+    <div id="errorMsg" class="error-msg"></div>
+    <div id="successMsg" class="success-msg"></div>
+  </div>
+
+  <!-- Footer -->
+  <div class="sidebar-footer">
+    <a href="https://kinarikoubou.github.io/sheets-invoice/privacy" target="_blank">プライバシーポリシー</a>
+    &nbsp;|&nbsp;
+    <a href="https://kinarikoubou.github.io/sheets-invoice/terms" target="_blank">利用規約</a>
+    &nbsp;|&nbsp;
+    <a href="mailto:support@kinarikoubou.com">サポート</a>
+  </div>
+
+<script>
+// ========== State ==========
+var currentSettings = {};
+var currentPlan = { active: false, plan: 'free' };
+var currentUsage = { allowed: true, remaining: 3, limit: 3, count: 0, plan: 'free' };
+var customers = [];
+var itemCount = 0;
+
+// ========== Init ==========
+document.addEventListener('DOMContentLoaded', function() {
+  showLoading('読み込み中...');
+  google.script.run
+    .withSuccessHandler(function(jsonStr) {
+      hideLoading();
+      var data = JSON.parse(jsonStr);
+      currentSettings = data.settings;
+      currentPlan = data.plan;
+      currentUsage = data.usage;
+
+      if (!currentSettings.hasSeenOnboarding) {
+        showView('onboarding');
+      } else {
+        initMainView();
+        showView('main');
+      }
+    })
+    .withFailureHandler(function(err) {
+      hideLoading();
+      showError('初期データの読み込みに失敗しました: ' + err.message);
+      showView('main');
+    })
+    .getSettingsForSidebar();
+});
+
+// ========== Views ==========
+function showView(view) {
+  document.getElementById('onboardingView').style.display = view === 'onboarding' ? 'block' : 'none';
+  document.getElementById('mainView').style.display = view === 'main' ? 'block' : 'none';
+}
+
+function initMainView() {
+  // Set default dates
+  var today = new Date();
+  document.getElementById('issueDate').value = toISODate(today);
+  var dueDays = currentSettings.defaultDueDays || 30;
+  var due = new Date(today);
+  due.setDate(due.getDate() + dueDays);
+  document.getElementById('dueDate').value = toISODate(due);
+
+  // Withholding default
+  document.getElementById('withholdingEnabled').checked = currentSettings.withholdingEnabled || false;
+
+  // Note default
+  document.getElementById('invoiceNote').value = currentSettings.defaultNote || '';
+
+  // Add first item row
+  if (itemCount === 0) addItemRow();
+
+  // Update plan UI
+  updatePlanUI();
+
+  // Load customers if paid
+  if (currentPlan.plan !== 'free') {
+    loadCustomers();
+  }
+
+  // Fill settings tab
+  fillSettingsForm();
+}
+
+function toISODate(d) {
+  return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+}
+
+// ========== Tabs ==========
+function switchTab(tab) {
+  document.getElementById('createTab').style.display = tab === 'create' ? 'block' : 'none';
+  document.getElementById('historyTab').style.display = tab === 'history' ? 'block' : 'none';
+  document.getElementById('settingsTab').style.display = tab === 'settings' ? 'block' : 'none';
+  document.getElementById('generateBtn').style.display = tab === 'create' ? 'block' : 'none';
+
+  document.getElementById('tabCreate').className = 'tab' + (tab === 'create' ? ' active' : '');
+  document.getElementById('tabHistory').className = 'tab' + (tab === 'history' ? ' active' : '');
+  document.getElementById('tabSettings').className = 'tab' + (tab === 'settings' ? ' active' : '');
+
+  if (tab === 'history') loadHistory();
+  if (tab === 'settings') fillSettingsForm();
+}
+
+// ========== Plan UI ==========
+function updatePlanUI() {
+  var plan = currentPlan.plan;
+  var usage = currentUsage;
+
+  // Plan badge
+  var badge = document.getElementById('planBadge');
+  if (plan === 'pro') {
+    badge.textContent = 'Pro';
+    badge.className = 'badge badge-pro';
+  } else if (plan === 'basic') {
+    badge.textContent = 'Basic';
+    badge.className = 'badge badge-basic';
+  } else {
+    badge.textContent = '無料プラン';
+    badge.className = 'badge badge-free';
+  }
+
+  // Usage bar
+  var usageCard = document.getElementById('usageCard');
+  if (plan === 'free') {
+    usageCard.style.display = 'block';
+    var pct = Math.min(100, (usage.count / usage.limit) * 100);
+    var fill = document.getElementById('usageBarFill');
+    fill.style.width = pct + '%';
+    fill.className = 'usage-bar-fill' + (pct >= 100 ? ' danger' : pct >= 66 ? ' warning' : '');
+    document.getElementById('usageText').textContent = usage.count + ' / ' + usage.limit + '枚';
+  } else {
+    usageCard.style.display = 'none';
+  }
+
+  // Upgrade banner
+  document.getElementById('upgradeBanner').style.display = plan === 'free' ? 'block' : 'none';
+
+  // Customer select area
+  document.getElementById('customerSelectArea').style.display = plan !== 'free' ? 'flex' : 'none';
+  document.getElementById('saveCustomerArea').style.display = plan !== 'free' ? 'block' : 'none';
+
+  // Settings plan info
+  updateSettingsPlanInfo();
+}
+
+function updateSettingsPlanInfo() {
+  var info = document.getElementById('settingsPlanInfo');
+  var plan = currentPlan.plan;
+  if (plan === 'pro') {
+    info.innerHTML = '<span class="badge badge-pro">Pro</span><p class="info-text" style="margin-top:8px;">全機能利用可能</p>';
+    document.getElementById('portalBtn').style.display = 'block';
+  } else if (plan === 'basic') {
+    info.innerHTML = '<span class="badge badge-basic">Basic</span><p class="info-text" style="margin-top:8px;">無制限生成・顧客マスタ・一括生成が利用可能</p>';
+    document.getElementById('portalBtn').style.display = 'block';
+  } else {
+    info.innerHTML = '<span class="badge badge-free">無料プラン</span><p class="info-text" style="margin-top:8px;">月3枚まで</p>' +
+      '<div style="margin-top:8px;">' +
+      '<button class="btn btn-primary btn-sm" onclick="handleUpgrade(\'basic\')" style="margin-bottom:4px;">Basic ¥500/月</button>' +
+      '<button class="btn btn-secondary btn-sm" onclick="handleUpgrade(\'pro\')">Pro ¥1,500/月</button>' +
+      '</div>';
+  }
+}
+
+// ========== Item Rows ==========
+function addItemRow() {
+  itemCount++;
+  var id = itemCount;
+  var container = document.getElementById('itemsContainer');
+  var div = document.createElement('div');
+  div.className = 'item-row';
+  div.id = 'item-' + id;
+  div.innerHTML =
+    '<button class="remove-btn" onclick="removeItemRow(' + id + ')" title="削除">&times;</button>' +
+    '<div class="form-group-sm">' +
+      '<input type="text" class="input input-sm" placeholder="品目名" data-field="description" onchange="recalculate()">' +
+    '</div>' +
+    '<div class="form-row">' +
+      '<div class="form-group form-group-sm">' +
+        '<label class="label">数量</label>' +
+        '<input type="number" class="input input-sm" value="1" min="0" data-field="quantity" onchange="recalculate()" oninput="recalculate()">' +
+      '</div>' +
+      '<div class="form-group form-group-sm">' +
+        '<label class="label">単価</label>' +
+        '<input type="number" class="input input-sm" value="0" min="0" data-field="unitPrice" onchange="recalculate()" oninput="recalculate()">' +
+      '</div>' +
+      '<div class="form-group form-group-sm form-group-fixed">' +
+        '<label class="label">税率</label>' +
+        '<select class="select" style="padding:6px 8px;font-size:13px;width:68px;" data-field="taxRate" onchange="recalculate()">' +
+          '<option value="10">10%</option>' +
+          '<option value="8">8%</option>' +
+        '</select>' +
+      '</div>' +
+    '</div>';
+  container.appendChild(div);
+  recalculate();
+}
+
+function removeItemRow(id) {
+  var el = document.getElementById('item-' + id);
+  if (el) el.remove();
+  recalculate();
+}
+
+function getItems() {
+  var rows = document.querySelectorAll('.item-row');
+  var items = [];
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    var desc = row.querySelector('[data-field="description"]');
+    var qty = row.querySelector('[data-field="quantity"]');
+    var price = row.querySelector('[data-field="unitPrice"]');
+    var tax = row.querySelector('[data-field="taxRate"]');
+    items.push({
+      description: desc ? desc.value : '',
+      quantity: qty ? parseFloat(qty.value) || 0 : 0,
+      unitPrice: price ? parseFloat(price.value) || 0 : 0,
+      taxRate: tax ? parseInt(tax.value) : 10
+    });
+  }
+  return items;
+}
+
+// ========== Recalculate ==========
+function recalculate() {
+  var items = getItems();
+  var withholding = document.getElementById('withholdingEnabled').checked;
+
+  // Local calculation (no server call needed)
+  var subtotal10 = 0, subtotal8 = 0;
+  for (var i = 0; i < items.length; i++) {
+    var amt = items[i].quantity * items[i].unitPrice;
+    if (items[i].taxRate === 8) subtotal8 += amt;
+    else subtotal10 += amt;
+  }
+
+  var tax10 = Math.floor(subtotal10 * 0.1);
+  var tax8 = Math.floor(subtotal8 * 0.08);
+  var subtotal = subtotal10 + subtotal8;
+  var totalWithTax = subtotal + tax10 + tax8;
+
+  var withholdingAmt = 0;
+  if (withholding && totalWithTax > 0) {
+    if (totalWithTax <= 1000000) {
+      withholdingAmt = Math.floor(totalWithTax * 0.1021);
+    } else {
+      withholdingAmt = Math.floor(1000000 * 0.1021 + (totalWithTax - 1000000) * 0.2042);
+    }
+  }
+
+  var grandTotal = totalWithTax - withholdingAmt;
+
+  // Update UI
+  document.getElementById('summarySubtotal').textContent = '¥' + formatNum(subtotal);
+  document.getElementById('summarySubtotal10').textContent = '¥' + formatNum(subtotal10);
+  document.getElementById('summaryTax10').textContent = '¥' + formatNum(tax10);
+
+  var has8 = subtotal8 > 0;
+  document.getElementById('summary8Row').style.display = has8 ? '' : 'none';
+  document.getElementById('summaryTax8Row').style.display = has8 ? '' : 'none';
+  document.getElementById('summarySubtotal8').textContent = '¥' + formatNum(subtotal8);
+  document.getElementById('summaryTax8').textContent = '¥' + formatNum(tax8);
+
+  document.getElementById('summaryWithholdingRow').style.display = withholding ? '' : 'none';
+  document.getElementById('summaryWithholding').textContent = '-¥' + formatNum(withholdingAmt);
+
+  document.getElementById('summaryGrandTotal').textContent = '¥' + formatNum(grandTotal);
+}
+
+function formatNum(n) {
+  return Math.floor(n).toLocaleString('ja-JP');
+}
+
+// ========== Generate Invoice ==========
+function handleGenerate() {
+  var clientName = document.getElementById('clientName').value.trim();
+  if (!clientName) {
+    showError('取引先名を入力してください');
+    return;
+  }
+
+  var items = getItems();
+  var hasValidItem = false;
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].description && items[i].quantity > 0 && items[i].unitPrice > 0) {
+      hasValidItem = true;
+      break;
+    }
+  }
+  if (!hasValidItem) {
+    showError('品目を1つ以上入力してください（品目名・数量・単価が必要です）');
+    return;
+  }
+
+  var formData = {
+    clientName: clientName,
+    clientAddress: document.getElementById('clientAddress').value.trim(),
+    clientContactPerson: document.getElementById('clientContact').value.trim(),
+    items: items,
+    issueDate: document.getElementById('issueDate').value,
+    dueDate: document.getElementById('dueDate').value,
+    withholdingEnabled: document.getElementById('withholdingEnabled').checked,
+    note: document.getElementById('invoiceNote').value.trim()
+  };
+
+  showLoading('請求書を生成中...');
+  clearMessages();
+
+  google.script.run
+    .withSuccessHandler(function(jsonStr) {
+      hideLoading();
+      var result = JSON.parse(jsonStr);
+      showGenerateResult(result);
+      // Update usage
+      currentUsage.count++;
+      currentUsage.remaining = currentUsage.limit === -1 ? -1 : Math.max(0, currentUsage.limit - currentUsage.count);
+      currentUsage.allowed = currentUsage.limit === -1 || currentUsage.count < currentUsage.limit;
+      updatePlanUI();
+    })
+    .withFailureHandler(function(err) {
+      hideLoading();
+      showError(err.message);
+    })
+    .createInvoiceFromSidebar(formData);
+}
+
+function showGenerateResult(result) {
+  var area = document.getElementById('resultArea');
+  area.innerHTML =
+    '<div class="result-card">' +
+      '<h3>請求書を作成しました</h3>' +
+      '<div class="result-detail">請求書番号: ' + result.invoiceData.invoiceNumber + '</div>' +
+      '<div class="result-detail">請求先: ' + result.invoiceData.client.name + '</div>' +
+      '<div class="result-detail">ご請求金額: ¥' + formatNum(result.invoiceData.grandTotal) + '</div>' +
+      '<a href="' + result.pdf.fileUrl + '" target="_blank" class="btn btn-primary" style="margin-top:12px;">PDFを開く</a>' +
+      '<button class="btn btn-secondary" onclick="resetForm()" style="margin-top:8px;">新しい請求書を作成</button>' +
+    '</div>';
+  area.style.display = 'block';
+}
+
+function resetForm() {
+  document.getElementById('clientName').value = '';
+  document.getElementById('clientAddress').value = '';
+  document.getElementById('clientContact').value = '';
+  document.getElementById('itemsContainer').innerHTML = '';
+  itemCount = 0;
+  addItemRow();
+  document.getElementById('resultArea').style.display = 'none';
+  recalculate();
+}
+
+// ========== Customers ==========
+function loadCustomers() {
+  google.script.run
+    .withSuccessHandler(function(jsonStr) {
+      customers = JSON.parse(jsonStr || '[]');
+      updateCustomerSelect();
+    })
+    .withFailureHandler(function(err) {
+      // Non-critical
+    })
+    .getCustomersFromSidebar();
+}
+
+function updateCustomerSelect() {
+  var select = document.getElementById('customerSelect');
+  select.innerHTML = '<option value="">-- 顧客マスタから選択 --</option>';
+  for (var i = 0; i < customers.length; i++) {
+    var opt = document.createElement('option');
+    opt.value = customers[i].id;
+    opt.textContent = customers[i].name;
+    select.appendChild(opt);
+  }
+}
+
+function loadCustomerFromMaster() {
+  var id = document.getElementById('customerSelect').value;
+  if (!id) return;
+  for (var i = 0; i < customers.length; i++) {
+    if (customers[i].id === id) {
+      document.getElementById('clientName').value = customers[i].name || '';
+      document.getElementById('clientAddress').value = customers[i].address || '';
+      document.getElementById('clientContact').value = customers[i].contactPerson || '';
+      break;
+    }
+  }
+}
+
+function deleteSelectedCustomer() {
+  var id = document.getElementById('customerSelect').value;
+  if (!id) {
+    showError('削除する顧客を選択してください');
+    return;
+  }
+  var name = '';
+  for (var i = 0; i < customers.length; i++) {
+    if (customers[i].id === id) { name = customers[i].name; break; }
+  }
+  if (!confirm('「' + name + '」を顧客マスタから削除しますか？')) return;
+
+  showLoading('削除中...');
+  google.script.run
+    .withSuccessHandler(function() {
+      hideLoading();
+      customers = customers.filter(function(c) { return c.id !== id; });
+      updateCustomerSelect();
+      showSuccess('顧客を削除しました');
+    })
+    .withFailureHandler(function(err) {
+      hideLoading();
+      showError(err.message);
+    })
+    .deleteCustomerFromSidebar(id);
+}
+
+function saveCurrentAsCustomer() {
+  var name = document.getElementById('clientName').value.trim();
+  if (!name) {
+    showError('取引先名を入力してください');
+    return;
+  }
+
+  var data = {
+    name: name,
+    address: document.getElementById('clientAddress').value.trim(),
+    contactPerson: document.getElementById('clientContact').value.trim()
+  };
+
+  showLoading('顧客を保存中...');
+  google.script.run
+    .withSuccessHandler(function(jsonStr) {
+      hideLoading();
+      showSuccess('顧客マスタに保存しました');
+      var saved = JSON.parse(jsonStr);
+      customers.push(saved);
+      updateCustomerSelect();
+    })
+    .withFailureHandler(function(err) {
+      hideLoading();
+      showError(err.message);
+    })
+    .saveCustomerFromSidebar(data);
+}
+
+// ========== History ==========
+function loadHistory() {
+  var list = document.getElementById('historyList');
+  if (currentPlan.plan !== 'pro') {
+    list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#x1F512;</div><p>履歴管理はProプランの機能です</p></div>';
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(function(jsonStr) {
+      var history = JSON.parse(jsonStr || '[]');
+      if (!history || history.length === 0) {
+        list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#x1F4C4;</div><p>まだ請求書を発行していません</p></div>';
+        return;
+      }
+      var html = '';
+      for (var i = 0; i < history.length; i++) {
+        var h = history[i];
+        html += '<div class="history-item">' +
+          '<div class="history-main">' +
+            '<div class="history-number">' + h.invoiceNumber + '</div>' +
+            '<div class="history-client">' + (h.clientName || '') + ' / ' + (h.issueDate || '') + '</div>' +
+          '</div>' +
+          '<div class="history-amount">¥' + formatNum(h.grandTotal || 0) + '</div>' +
+        '</div>';
+      }
+      list.innerHTML = html;
+    })
+    .withFailureHandler(function(err) {
+      list.innerHTML = '<div class="empty-state"><p>' + err.message + '</p></div>';
+    })
+    .getInvoiceHistoryFromSidebar();
+}
+
+// ========== Settings ==========
+function fillSettingsForm() {
+  var s = currentSettings;
+  document.getElementById('settingsIssuerName').value = s.issuer ? s.issuer.name || '' : '';
+  document.getElementById('settingsRegNumber').value = s.issuer ? s.issuer.registrationNumber || '' : '';
+  document.getElementById('settingsAddress').value = s.issuer ? s.issuer.address || '' : '';
+  document.getElementById('settingsPhone').value = s.issuer ? s.issuer.phone || '' : '';
+  document.getElementById('settingsEmail').value = s.issuer ? s.issuer.email || '' : '';
+
+  document.getElementById('settingsBankName').value = s.bankAccount ? s.bankAccount.bankName || '' : '';
+  document.getElementById('settingsBranchName').value = s.bankAccount ? s.bankAccount.branchName || '' : '';
+  document.getElementById('settingsAccountType').value = s.bankAccount ? s.bankAccount.accountType || '普通' : '普通';
+  document.getElementById('settingsAccountNumber').value = s.bankAccount ? s.bankAccount.accountNumber || '' : '';
+  document.getElementById('settingsAccountHolder').value = s.bankAccount ? s.bankAccount.accountHolder || '' : '';
+
+  document.getElementById('settingsPrefix').value = s.invoicePrefix || 'INV';
+  document.getElementById('settingsDueDays').value = s.defaultDueDays || 30;
+  document.getElementById('settingsWithholding').checked = s.withholdingEnabled || false;
+  document.getElementById('settingsNote').value = s.defaultNote || '';
+}
+
+function saveSettingsUI() {
+  showLoading('保存中...');
+  var settings = {
+    issuer: {
+      name: document.getElementById('settingsIssuerName').value.trim(),
+      registrationNumber: document.getElementById('settingsRegNumber').value.trim(),
+      address: document.getElementById('settingsAddress').value.trim(),
+      phone: document.getElementById('settingsPhone').value.trim(),
+      email: document.getElementById('settingsEmail').value.trim()
+    },
+    bankAccount: {
+      bankName: document.getElementById('settingsBankName').value.trim(),
+      branchName: document.getElementById('settingsBranchName').value.trim(),
+      accountType: document.getElementById('settingsAccountType').value,
+      accountNumber: document.getElementById('settingsAccountNumber').value.trim(),
+      accountHolder: document.getElementById('settingsAccountHolder').value.trim()
+    }
+  };
+
+  google.script.run
+    .withSuccessHandler(function() {
+      hideLoading();
+      currentSettings.issuer = settings.issuer;
+      currentSettings.bankAccount = settings.bankAccount;
+      showSuccess('事業者情報を保存しました');
+    })
+    .withFailureHandler(function(err) {
+      hideLoading();
+      showError('保存に失敗しました: ' + err.message);
+    })
+    .saveSettingsFromSidebar(settings);
+}
+
+function saveInvoiceSettingsUI() {
+  showLoading('保存中...');
+  var settings = {
+    invoicePrefix: document.getElementById('settingsPrefix').value.trim() || 'INV',
+    defaultDueDays: parseInt(document.getElementById('settingsDueDays').value) || 30,
+    withholdingEnabled: document.getElementById('settingsWithholding').checked,
+    defaultNote: document.getElementById('settingsNote').value.trim()
+  };
+
+  google.script.run
+    .withSuccessHandler(function() {
+      hideLoading();
+      currentSettings.invoicePrefix = settings.invoicePrefix;
+      currentSettings.defaultDueDays = settings.defaultDueDays;
+      currentSettings.withholdingEnabled = settings.withholdingEnabled;
+      currentSettings.defaultNote = settings.defaultNote;
+      showSuccess('請求書設定を保存しました');
+    })
+    .withFailureHandler(function(err) {
+      hideLoading();
+      showError('保存に失敗しました: ' + err.message);
+    })
+    .saveSettingsFromSidebar(settings);
+}
+
+function handleResetSettings() {
+  if (!confirm('全ての設定・顧客マスタ・履歴を初期化しますか？')) return;
+  showLoading('リセット中...');
+  google.script.run
+    .withSuccessHandler(function() {
+      hideLoading();
+      currentSettings = { hasSeenOnboarding: false, issuer: {}, bankAccount: {} };
+      currentPlan = { active: false, plan: 'free' };
+      currentUsage = { allowed: true, remaining: 3, limit: 3, count: 0, plan: 'free' };
+      showView('onboarding');
+      showSuccess('リセットしました');
+    })
+    .withFailureHandler(function(err) {
+      hideLoading();
+      showError('リセットに失敗しました: ' + err.message);
+    })
+    .resetSettingsFromSidebar();
+}
+
+// ========== Onboarding ==========
+function completeSetup() {
+  console.log('completeSetup called');
+  var name = document.getElementById('setupIssuerName').value.trim();
+  console.log('name:', name);
+  if (!name) {
+    showError('事業者名を入力してください');
+    return;
+  }
+
+  var regNum = document.getElementById('setupRegNumber').value.trim();
+  if (regNum && !/^T\d{13}$/.test(regNum)) {
+    showError('登録番号はT+13桁の数字で入力してください（例: T1234567890123）');
+    return;
+  }
+
+  var data = {
+    name: name,
+    registrationNumber: regNum,
+    address: document.getElementById('setupAddress').value.trim(),
+    phone: document.getElementById('setupPhone').value.trim(),
+    email: document.getElementById('setupEmail').value.trim(),
+    bankName: document.getElementById('setupBankName').value.trim(),
+    branchName: document.getElementById('setupBranchName').value.trim(),
+    accountType: document.getElementById('setupAccountType').value,
+    accountNumber: document.getElementById('setupAccountNumber').value.trim(),
+    accountHolder: document.getElementById('setupAccountHolder').value.trim()
+  };
+
+  console.log('calling saveIssuerFromSidebar with data:', JSON.stringify(data));
+  showLoading('設定中...');
+  google.script.run
+    .withSuccessHandler(function() {
+      console.log('saveIssuerFromSidebar SUCCESS');
+      hideLoading();
+      currentSettings.hasSeenOnboarding = true;
+      currentSettings.issuer = {
+        name: data.name,
+        registrationNumber: data.registrationNumber,
+        address: data.address,
+        phone: data.phone,
+        email: data.email
+      };
+      currentSettings.bankAccount = {
+        bankName: data.bankName,
+        branchName: data.branchName,
+        accountType: data.accountType,
+        accountNumber: data.accountNumber,
+        accountHolder: data.accountHolder
+      };
+      initMainView();
+      showView('main');
+    })
+    .withFailureHandler(function(err) {
+      console.log('saveIssuerFromSidebar FAILED:', err);
+      hideLoading();
+      showError('保存に失敗しました: ' + err.message);
+    })
+    .saveIssuerFromSidebar(data);
+}
+
+// ========== Upgrade ==========
+function handleUpgrade(planId) {
+  showLoading('決済ページを準備中...');
+  google.script.run
+    .withSuccessHandler(function(url) {
+      hideLoading();
+      var area = document.getElementById('resultArea');
+      area.innerHTML =
+        '<div class="result-card">' +
+          '<h3>決済ページの準備ができました</h3>' +
+          '<p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">1. 下のリンクで決済を完了<br>2. 戻ったら「決済完了を確認」をクリック</p>' +
+          '<a href="' + url + '" target="_blank" class="btn btn-primary" style="margin-bottom:8px;">決済ページを開く</a>' +
+          '<button class="btn btn-primary" onclick="verifyPayment()" style="background:#1e8e3e;margin-bottom:8px;">決済完了を確認する</button>' +
+          '<button class="btn btn-secondary" onclick="document.getElementById(\'resultArea\').style.display=\'none\';">閉じる</button>' +
+        '</div>';
+      area.style.display = 'block';
+      area.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    })
+    .withFailureHandler(function(err) {
+      hideLoading();
+      showError('決済エラー: ' + err.message);
+    })
+    .createCheckoutSession(planId);
+}
+
+function verifyPayment() {
+  showLoading('決済を確認中...');
+  google.script.run
+    .withSuccessHandler(function(jsonStr) {
+      hideLoading();
+      try {
+        var result = JSON.parse(jsonStr);
+        if (result.activated) {
+          currentPlan = { active: result.planActive, plan: result.planName };
+          currentUsage = { count: result.usageCount, limit: result.usageLimit, remaining: result.usageRemaining, allowed: true, plan: result.planName };
+          updatePlanUI();
+          document.getElementById('resultArea').style.display = 'none';
+          showSuccess(result.planName.toUpperCase() + ' プランが有効化されました！');
+        } else {
+          showError(result.message || '決済が確認できませんでした');
+        }
+      } catch(e) {
+        showError('パースエラー: ' + e.message + ' raw=' + String(jsonStr).substring(0, 100));
+      }
+    })
+    .withFailureHandler(function(err) {
+      hideLoading();
+      showError('確認エラー: ' + (err.message || JSON.stringify(err)));
+    })
+    .checkPaymentFromSidebar();
+}
+
+function openCustomerPortal() {
+  showLoading('Stripeポータルを準備中...');
+  google.script.run
+    .withSuccessHandler(function(url) {
+      hideLoading();
+      window.open(url, '_blank');
+    })
+    .withFailureHandler(function(err) {
+      hideLoading();
+      showError(err.message);
+    })
+    .createCustomerPortalSession();
+}
+
+// ========== Loading ==========
+function showLoading(text) {
+  document.getElementById('loadingText').textContent = text || '読み込み中...';
+  document.getElementById('loadingOverlay').classList.add('active');
+}
+
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('active');
+}
+
+// ========== Messages ==========
+function showError(msg) {
+  var el = document.getElementById('errorMsg');
+  el.textContent = msg;
+  el.classList.add('visible');
+  setTimeout(function() { el.classList.remove('visible'); }, 8000);
+}
+
+function showSuccess(msg) {
+  var el = document.getElementById('successMsg');
+  el.textContent = msg;
+  el.classList.add('visible');
+  setTimeout(function() { el.classList.remove('visible'); }, 5000);
+}
+
+function clearMessages() {
+  document.getElementById('errorMsg').classList.remove('visible');
+  document.getElementById('successMsg').classList.remove('visible');
+  document.getElementById('resultArea').style.display = 'none';
+}
+</script>
+</body>
+</html>
