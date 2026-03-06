@@ -36,8 +36,8 @@ function createCheckoutSession(planId) {
     'mode': 'subscription',
     'line_items[0][price]': priceId,
     'line_items[0][quantity]': '1',
-    'success_url': 'https://kinarikoubou.github.io/sheets-invoice/payment-success.html?session_id={CHECKOUT_SESSION_ID}',
-    'cancel_url': 'https://kinarikoubou.github.io/sheets-invoice/payment-cancel.html',
+    'success_url': 'https://kazushinishiyama.github.io/sheets-invoice/payment-success.html?session_id={CHECKOUT_SESSION_ID}',
+    'cancel_url': 'https://kazushinishiyama.github.io/sheets-invoice/payment-cancel.html',
     'allow_promotion_codes': 'true',
     'locale': 'ja',
     'metadata[addon]': 'sheets-invoice-maker',
@@ -340,7 +340,7 @@ function createCustomerPortalSession() {
     headers: { 'Authorization': 'Bearer ' + stripeKey },
     payload: {
       'customer': plan.customerId,
-      'return_url': 'https://kinarikoubou.github.io/sheets-invoice/portal-return.html'
+      'return_url': 'https://kazushinishiyama.github.io/sheets-invoice/portal-return.html'
     },
     muteHttpExceptions: true
   });
